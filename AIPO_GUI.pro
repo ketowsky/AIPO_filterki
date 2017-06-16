@@ -28,11 +28,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        imageviewer.cpp
+        imageviewer.cpp \
+    medianfilter.cpp
 
 HEADERS += \
         mainwindow.h \
-    imageviewer.h
+    imageviewer.h \
+    algorithm.h \
+    medianfilter.h
 
 FORMS += \
         mainwindow.ui
@@ -43,3 +46,17 @@ SUBDIRS += \
 # install
     target.path = $$[QT_INSTALL_EXAMPLES]/widgets/widgets/imageviewer
     INSTALLS += target
+
+INCLUDEPATH += C:/OpencvForQt/dobry/build/install/include
+
+CONFIG(release,debug|release)
+{
+LIBS += -LC:/OpencvForQt/dobry/build/install/x86/mingw/lib \
+    -lopencv_core320.dll \
+    -lopencv_highgui320.dll \
+    -lopencv_imgcodecs320.dll \
+    -lopencv_imgproc320.dll \
+    -lopencv_features2d320.dll \
+    -lopencv_calib3d320.dll \
+    -lopencv_videoio320.dll
+}

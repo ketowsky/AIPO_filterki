@@ -1,10 +1,13 @@
-#include <QtWidgets>
+﻿#include <QtWidgets>
 #ifndef QT_NO_PRINTER
 #include <QPrintDialog>
 #endif
 
 #include "imageviewer.h"
 //#include "mainwindow.h"
+
+#include<iostream>
+
 
 ImageViewer::ImageViewer() : imageLabel(new QLabel), scrollArea(new QScrollArea), scaleFactor(1) {
     imageLabel->setBackgroundRole(QPalette::Base);
@@ -16,9 +19,16 @@ ImageViewer::ImageViewer() : imageLabel(new QLabel), scrollArea(new QScrollArea)
     scrollArea->setVisible(false);
     setCentralWidget(scrollArea);
 
+    //scaleFactor =1.0;
+
     createActions();
 
     resize(QGuiApplication::primaryScreen()->availableSize() * 3 / 5);
+
+    /*capture = VideoCapture(0);
+    timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()),this, SLOT(updateVideo()));
+    timer->start(20);*/
 }
 
 
@@ -54,6 +64,7 @@ void ImageViewer::setImage(const QImage &newImage) {
     printAct->setEnabled(true);
     fitToWindowAct->setEnabled(true);
     updateActions();
+    scaleImage(scaleFactor);
 
     if (!fitToWindowAct->isChecked())
         imageLabel->adjustSize();
@@ -72,6 +83,20 @@ bool ImageViewer::saveFile(const QString &fileName) {
     const QString message = tr("Wrote \"%1\"").arg(QDir::toNativeSeparators(fileName));
     statusBar()->showMessage(message);
     return true;
+}
+
+void ImageViewer::updateVideo(){
+    capture >> mat_image;
+    Mat dest;
+    cvtColor(mat_image,dest, CV_BGR2RGB);
+    QImage image1 = QImage((uchar*)dest.data, dest.cols, dest.rows, dest.step, QImage::Format_RGB888);
+
+    setWindowFilePath("fileName");
+
+    const QString message = tr("Opened \"%1\", %2x%3, Depth: %4")
+        .arg(QDir::toNativeSeparators("fileName")).arg(image1.width()).arg(image1.height()).arg(image1.depth());
+    statusBar()->showMessage(message);
+    setImage(image1);
 }
 
 
@@ -256,7 +281,7 @@ void ImageViewer::createActions() {
     // Median
     medianAct = menu_filter->addAction(tr("&Median"), this, &ImageViewer::OnFilterMedian);
     //medianAct->setShortcut(QKeySequence::ZoomIn);
-    medianAct->setEnabled(false);
+    medianAct->setEnabled(true);
 
     // Fill Holes
     fillholesAct = menu_filter->addAction(tr("&Fill Holes"), this, &ImageViewer::OnFilterFillHoles);
@@ -279,6 +304,11 @@ void ImageViewer::OnFilterWatershed() {
     statusBar()->showMessage("Watershed? DONE!");
 }
 void ImageViewer::OnFilterMedian() {
+    mat_image = Mat(image.height(), image.width(), CV_8UC4, (uchar*)image.bits(), image.bytesPerLine());
+   // cvtColor(mat_image, mat_image, CV_BGR2RGB);
+    MedianFilter medianFilter;
+    Mat dest = medianFilter(mat_image);
+    showMatImage(dest);
     statusBar()->showMessage("Median? DONE!");
 }
 
@@ -314,4 +344,17 @@ void ImageViewer::scaleImage(double factor) {
 void ImageViewer::adjustScrollBar(QScrollBar *scrollBar, double factor) {
     scrollBar->setValue(int(factor * scrollBar->value()
                             + ((factor - 1) * scrollBar->pageStep()/2)));
+}
+
+void ImageViewer::showMatImage(const Mat &image){
+    Mat dest /*= image.clone()*/;
+    cvtColor(image,dest, CV_BGR2RGB);
+    QImage image1 = QImage((uchar*)dest.data, dest.cols, dest.rows, QImage::Format_RGB888);
+
+    setWindowFilePath("fileName");
+
+    const QString message = tr("Opened \"%1\", %2x%3, Depth: %4")
+        .arg(QDir::toNativeSeparators("fileName")).arg(image1.width()).arg(image1.height()).arg(image1.depth());
+    statusBar()->showMessage(message);
+    setImage(image1);
 }

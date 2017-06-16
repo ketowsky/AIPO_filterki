@@ -7,11 +7,19 @@
 #include <QPrinter>
 #endif
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include "medianfilter.h"
+
 class QAction;
 class QLabel;
 class QMenu;
 class QScrollArea;
 class QScrollBar;
+
+using namespace  cv;
 
 class ImageViewer : public QMainWindow
 {
@@ -20,6 +28,8 @@ class ImageViewer : public QMainWindow
 public:
     ImageViewer();
     bool loadFile(const QString &);
+    VideoCapture capture;
+    Mat mat_image;
 
 private slots:
     void open();
@@ -32,6 +42,7 @@ private slots:
     void normalSize();
     void fitToWindow();
     void about();
+    void updateVideo();
 
     void OnFilterWatershed();
     void OnFilterMedian();
@@ -45,6 +56,7 @@ private:
     void setImage(const QImage &newImage);
     void scaleImage(double factor);
     void adjustScrollBar(QScrollBar *scrollBar, double factor);
+    void showMatImage(const Mat& image);
 
     QImage image;
     QLabel *imageLabel;
@@ -66,6 +78,8 @@ private:
     QAction *fillholesAct;
     QAction *medianAct;
     QAction *kuwaharaAct;
+
+    QTimer *timer;
 };
 
 #endif
