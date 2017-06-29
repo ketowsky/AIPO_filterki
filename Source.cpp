@@ -10,12 +10,13 @@
 
 #include "MedianFilter.h"
 #include "LinearKuwahara.h"
+#include "Watershed.h"
 
 using namespace cv; 
 
 
 int main(){
-	std::cout << "Wybierz metode:\n1) Filtr medianowy\n2) Filtr liniowy Kuwahara" << std::endl;
+	std::cout << "Wybierz metode:\n1) Filtr medianowy\n2) Filtr liniowy Kuwahara\n3) Filtr Watershed" << std::endl;
 	int numberM, number;
 	std::cin >> numberM;
 	std::cout << "Wybierz obraz (wpisz cyfrê od 1-3):" << std::endl;
@@ -116,6 +117,13 @@ int main(){
 			std::cout << "Zla cyfra" << std::endl;
 			return 0;
 		}
+	}
+	
+	
+	else if (numberM == 3){
+		Watershed * watershedObj = new Watershed(image);
+		dest = watershedObj->runAnalyse();
+		
 	}
 	
 	imshow("Org", image);
