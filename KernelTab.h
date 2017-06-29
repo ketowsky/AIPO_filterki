@@ -13,12 +13,10 @@ class KernelTab{
 public:
 	KernelTab(int sizex, int sizey);
 	~KernelTab();
-	//Mat* getKernel(int x, int y);
 	Mat* getKernel(int x);
 	void putKernel(Mat* tab);
 	int getSize();
 private:
-	//Mat*** tab;
 	Mat** tab;
 	int sizex;
 	int sizey;

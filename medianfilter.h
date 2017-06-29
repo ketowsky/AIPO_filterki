@@ -13,7 +13,6 @@
 using namespace cv;
 class MedianFilter :public Aipo::Algorithm{
 public:
-	//default, mask 3x3, weight 1 for every pixel
 	MedianFilter();
 	MedianFilter(int **tab, int size);
 	~MedianFilter();
@@ -27,4 +26,4 @@ private:
 	int ** weight_tab;
 };
 
-#endif // MEDIANFILTER_H
+#endif 

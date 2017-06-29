@@ -36,8 +36,8 @@ MedianFilter::~MedianFilter(){
 }
 
 Mat MedianFilter::Run(const Mat &image){
-	int cols = image.cols;//450
-	int rows = image.rows;//333
+	int cols = image.cols;
+	int rows = image.rows;
 	int channels = image.channels();
 	Mat hsv_image;
 	if (channels == 3){

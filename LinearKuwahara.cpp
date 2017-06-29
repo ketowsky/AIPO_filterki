@@ -11,7 +11,6 @@ LinearKuwahara::LinearKuwahara(int len, int ang){
 }
 
 Mat LinearKuwahara::Run(const Mat& image){
-	//Mat copy = image.clone();
 	Mat copy = Mat::zeros(image.size(),image.type());
 	createKernel();
 	height = image.cols;
@@ -104,7 +103,6 @@ Mat LinearKuwahara::Run(const Mat& image){
 	double min;
 	minMaxLoc(image, &min);
 
-	std::cout << "WCZYTYWANIE" << std::endl;
 	//prepare arrays of image value minus min and square image
 	for (int i = 0; i < height; i++){
 		for (int j = 0; j < width; j++){
@@ -120,7 +118,6 @@ Mat LinearKuwahara::Run(const Mat& image){
 			}
 		}
 	}
-	std::cout << "PO WCZYTANIU" << std::endl;
 
 	for (int i = 0; i < kernelTab->getSize(); i++){
 			Mat* tempMat = kernelTab->getKernel(i);
@@ -259,6 +256,7 @@ void LinearKuwahara::mergeTabs(float*** imageTab, float*** squareTab, float*** s
 			}
 		}
 	}
+	delete kernelArray;
 }
 
 void LinearKuwahara::calculateVariance(float*** imageSum, float*** squareSum, float*** valueTab, float*** critTab, int sum){
@@ -318,6 +316,8 @@ void LinearKuwahara::useKuwahara(float*** valueTab, float*** critTab, Mat* kerne
 			}
 		}
 	}
+
+	delete kernelArray;
 }
 
 void LinearKuwahara::setResult(float*** result,float*** resultTab,float*** crit,float*** critTab){

@@ -10,38 +10,36 @@
 
 #include "MedianFilter.h"
 #include "LinearKuwahara.h"
+#include "FillHoles.h"
 #include "Watershed.h"
 
 using namespace cv; 
 
-
 int main(){
-	std::cout << "Wybierz metode:\n1) Filtr medianowy\n2) Filtr liniowy Kuwahara\n3) Filtr Watershed" << std::endl;
+	std::cout << "Wybierz metode:\n1) Filtr medianowy\n2) Filtr liniowy Kuwahara\n3) Watershed\n4) Fill Holes" << std::endl;
 	int numberM, number;
 	std::cin >> numberM;
-	std::cout << "Wybierz obraz (wpisz cyfrê od 1-3):" << std::endl;
-	std::cin >> number;
 	Mat image;
-	switch (number){
-	case 1:
-		image = imread("obr1.jpg",CV_LOAD_IMAGE_GRAYSCALE);
-		std::cout << "CHANNEL: " << image.channels() << std::endl;
-		break;
-	case 2:
-		image = imread("obr2.jpg");
-		break;
-	case 3:
-		image = imread("obr3.jpg");
-		break;
-	default:
-		std::cout << "Zla cyfra" << std::endl;
-		return 0;
-	}
-
 	
-	//MedianFilter medianFilter;
+
 	Mat dest;
 	if (numberM == 1){
+		std::cout << "Wybierz obraz (wpisz cyfre od 1-3):" << std::endl;
+		std::cin >> number;
+		switch (number){
+		case 1:
+			image = imread("median/obr1.jpg");
+			break;
+		case 2:
+			image = imread("median/obr2.jpg");
+			break;
+		case 3:
+			image = imread("median/obr3.jpg");
+			break;
+		default:
+			std::cout << "Zla cyfra" << std::endl;
+			return 0;
+		}
 		std::cout << "Wybierz rodzaj tablicy:\n 1)domyslna 3x3\t2)losowa 5x5\t3)wczytaj z pliku(mask.txt)" << std::endl;
 		std::cin >> number;
 		MedianFilter * medianFilter;
@@ -96,6 +94,22 @@ int main(){
 	}
 	//Linear Kuwahara
 	else if (numberM == 2){
+		std::cout << "Wybierz obraz (wpisz cyfre od 1-3):" << std::endl;
+		std::cin >> number;
+		switch (number){
+		case 1:
+			image = imread("kuwahara/obr1.jpg");
+			break;
+		case 2:
+			image = imread("kuwahara/obr2.jpg");
+			break;
+		case 3:
+			image = imread("kuwahara/obr3.jpg");
+			break;
+		default:
+			std::cout << "Zla cyfra" << std::endl;
+			return 0;
+		}
 		std::cout << "Wybierz wersje:\n1)domyslna\t2)wlasne parametry:" << std::endl;
 		std::cin >> number;
 		if (number == 1){
@@ -118,12 +132,28 @@ int main(){
 			return 0;
 		}
 	}
-	
-	
-	else if (numberM == 3){
+	//Watershed
+	else if(numberM == 3){
 		Watershed * watershedObj = new Watershed(image);
 		dest = watershedObj->runAnalyse();
-		
+	}
+	//FillHoles
+	else if (numberM == 4){
+		std::cout << "Wybierz obraz (wpisz cyfre od 1-2):" << std::endl;
+		std::cin >> number;
+		switch (number){
+		case 1:
+			image = imread("fillHoles/obr1.jpg");
+			break;
+		case 2:
+			image = imread("fillHoles/obr2.jpg");
+			break;
+		default:
+			std::cout << "Zla cyfra" << std::endl;
+			return 0;
+		}
+		FillHoles fillHoles;
+		dest = fillHoles(image);
 	}
 	
 	imshow("Org", image);
