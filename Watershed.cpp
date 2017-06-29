@@ -1,122 +1,300 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
-#include <vector>
-
+#include <string>
+#include <queue>
+#include <algorithm>
 #include "Watershed.h"
 
-using namespace cv;
-using namespace std;
 
-Watershed::Watershed() {
-};
 
-Watershed::Watershed(cv::Mat source) {
-	this->imgSrc = source.clone();
-	this->imgRes = source.clone();
-};
+WPixel::WPixel(int x, int y, char h) {
+	this->x = x;
+	this->y = y;
+	this->h = h;
+	lab = init;
+	dist = 0;
+	neighVect.reserve(8);
+}
+WPixel::WPixel() { 
+	lab = fictitious; 
+}
 
-cv::Mat Watershed::runAnalyse() {
+void WPixel::addNeighPixel(WPixel* neigh) {
+	neighVect.push_back(neigh);
+}
+std::vector<WPixel*>& WPixel::getNeighPixels() {
+	return neighVect;
+}
 
-	for (int x = 0; x < this->imgSrc.rows; x++) {
-		for (int y = 0; y < this->imgSrc.cols; y++) {
-			if (this->imgSrc.at<Vec3b>(x, y) == Vec3b(255, 255, 255)) {
-				this->imgSrc.at<Vec3b>(x, y)[0] = 0;
-				this->imgSrc.at<Vec3b>(x, y)[1] = 0;
-				this->imgSrc.at<Vec3b>(x, y)[2] = 0;
+char WPixel::getHeight() const { 
+	return h; 
+}
+int WPixel::getIntHeight() const { 
+	return (int)h & 0xff; 
+}
+int WPixel::getX() const { 
+	return x; 
+}
+int WPixel::getY() const {
+	return y; 
+}
+
+void WPixel::setLabel(int lab) { 
+	this->lab = lab; 
+}
+void WPixel::setInitLabel() { 
+	lab = init; 
+}
+void WPixel::setMaskLabel() { 
+	lab = mask; 
+}
+void WPixel::setWatershedLabel() { 
+	lab = wshed; 
+}
+int WPixel::getLabel() { 
+	return lab; 
+}
+
+bool WPixel::isInit() { 
+	return lab == init; 
+}
+bool WPixel::isMask() { 
+	return lab == mask; 
+}
+bool WPixel::isWatershed() { 
+	return lab == wshed; 
+}
+
+void WPixel::setDistance(int dist) { 
+	dist = dist; 
+}
+int WPixel::getDistance() { 
+	return dist; 
+}
+
+bool WPixel::isFictitious() { 
+	return lab == fictitious; 
+}
+
+bool WPixel::areAllNeighWatershed() {
+	for (unsigned i = 0; i < neighVect.size(); i++) {
+		WPixel* r = neighVect.at(i);
+		if (!r->isWatershed()) 
+			return false;
+	}
+	return true;
+}
+
+
+
+WStruct::WStruct(char* pixels, int w, int h) {
+
+	structure.reserve(w * h);
+	for (int y = 0; y < h; ++y)
+		for (int x = 0; x < w; ++x)
+			structure.push_back(new WPixel(x, y, pixels[x + y*w]));
+
+	
+	for (int y = 0; y < h; ++y) {
+		int offset = y * w;
+		int topOffset = offset + w;
+		int bottomOffset = offset - w;
+
+		for (int x = 0; x < w; ++x) {
+			int currentindex = x + y*w;
+			WPixel* currentPixel = structure.at(currentindex);
+
+			if (x - 1 >= 0) {
+				currentPixel->addNeighPixel(structure.at(currentindex - 1));
+				if (y - 1 >= 0)
+					currentPixel->addNeighPixel(structure.at(currentindex - 1 - w));
+				if (y + 1 < h)
+					currentPixel->addNeighPixel(structure.at(currentindex - 1 + w));
+			}
+
+			if (x + 1 < w) {
+				currentPixel->addNeighPixel(structure.at(currentindex + 1));
+				if (y - 1 >= 0)
+					currentPixel->addNeighPixel(structure.at(currentindex + 1 - w));
+				if (y + 1 < h)
+					currentPixel->addNeighPixel(structure.at(currentindex + 1 + w));
+			}
+
+			if (y - 1 >= 0)
+				currentPixel->addNeighPixel(structure.at(currentindex - w));
+
+			if (y + 1 < h)
+				currentPixel->addNeighPixel(structure.at(currentindex + w));
+		}
+	}
+
+	std::sort(structure.begin(), structure.end(),
+		[](WPixel * pl, WPixel * pr) { return pl->getIntHeight() < pr->getIntHeight(); });
+}
+
+WStruct::~WStruct() {
+	while (!structure.empty()) {
+		WPixel* p = structure.back();
+		delete p; p = NULL;
+		structure.pop_back();
+	}
+}
+
+int WStruct::size() { 
+	return structure.size(); 
+}
+
+WPixel* WStruct::at(int i) { 
+	return structure.at(i); 
+}
+
+
+
+void Watershed::Run(IplImage* imgSrc, const std::string& imgName) {
+	std::string imgNameTmp;
+	IplImage* pGray = cvCreateImage(cvGetSize(imgSrc), IPL_DEPTH_8U, 1);
+	if (imgSrc->nChannels == 3) {
+		cvCvtColor(imgSrc, pGray, CV_BGR2GRAY);
+		imgNameTmp = imgName + "_Gray.jpg"; cvSaveImage(imgNameTmp.c_str(), pGray);
+	}
+	else if (imgSrc->nChannels == 1)
+		pGray = imgSrc;
+	IplImage* imgGray = cvCreateImage(cvGetSize(pGray), IPL_DEPTH_8U, 1);
+	cvAdaptiveThreshold(pGray, imgGray, 255, 0, 0, 31);
+	imgNameTmp = imgName + "_BW.jpg"; cvSaveImage(imgNameTmp.c_str(), imgGray);
+
+	char* pixels = imgGray->imageData;
+	int w = imgGray->width;
+	int h = imgGray->height;
+
+	WStruct  wStructure(pixels, w, h);
+
+	std::queue<WPixel*> pQue;	
+	int curLabel = 0;
+	int hIndex1 = 0;
+	int hIndex2 = 0;
+	for (int h = hMin; h < hMax; ++h) { 
+		for (int pIndex = hIndex1; pIndex < wStructure.size(); ++pIndex) {
+			WPixel* p = wStructure.at(pIndex);
+
+				
+			if (p->getIntHeight() != h) { hIndex1 = pIndex; break; }
+
+			p->setMaskLabel(); 
+
+			std::vector<WPixel*> neigh = p->getNeighPixels();
+			for (unsigned i = 0; i < neigh.size(); ++i) {
+				WPixel* q = neigh.at(i);
+
+					
+				if (q->getLabel() >= 0) { p->setDistance(1); pQue.push(p); break; }
+			}
+		}
+
+		int curDist = 1;
+		pQue.push(new WPixel());
+
+
+
+	
+		while (true) {
+
+			WPixel* p = pQue.front();
+			pQue.pop();
+			printf("\nKurwa 1 while\n");
+			if (p->isFictitious())
+				if (pQue.empty()) { 
+					delete p; 
+					p = NULL; 
+					break; 
+				}
+				else {
+					pQue.push(new WPixel());
+					curDist++;
+					delete p; 
+					p = pQue.front(); 
+					pQue.pop();
+				}
+
+				std::vector<WPixel*> neigh = p->getNeighPixels();
+				for (unsigned i = 0; i < neigh.size(); ++i) {
+					WPixel* q = neigh.at(i);
+
+						
+					if ((q->getDistance() <= curDist) && (q->getLabel() >= 0)) {
+
+						if (q->getLabel() > 0) {
+							if (p->isMask())
+								p->setLabel(q->getLabel());
+							else if (p->getLabel() != q->getLabel())
+								p->setWatershedLabel();
+						}
+						else if (p->isMask())
+							p->setWatershedLabel();
+					}
+					else if (q->isMask() && (q->getDistance() == 0)) {
+						q->setDistance(curDist + 1);
+						pQue.push(q);
+					}
+					else {
+						break;
+					}
+				}
+
+		}
+
+		for (int pIndex = hIndex2; pIndex < wStructure.size(); pIndex++) {
+			WPixel* p = wStructure.at(pIndex);
+			printf("\nKurwa 4 for\n");
+
+			if (p->getIntHeight() != h) { hIndex2 = pIndex; break; }
+
+			p->setDistance(0);
+
+			if (p->isMask()) {
+				curLabel++;
+				p->setLabel(curLabel);
+				pQue.push(p);
+
+				while (!pQue.empty()) {
+					printf("\nKurwa 2 while\n");
+					WPixel* q = pQue.front();
+					pQue.pop();
+
+					std::vector<WPixel*> neighbours = q->getNeighPixels();
+
+					for (unsigned i = 0; i < neighbours.size(); i++) { 
+						WPixel* r = neighbours.at(i);
+
+						if (r->isMask()) { r->setLabel(curLabel); pQue.push(r); }
+					}
+				}
 			}
 		}
 	}
+	printf("\nDupa 4\n");
+	IplImage* pWS = cvCreateImage(cvGetSize(imgGray), IPL_DEPTH_8U, 1);
+	cvZero(imgGray);
+	char* wsPixels = pWS->imageData;
+	char* grayPixels = pGray->imageData;
+	printf("\nDupa 5\n");
+	for (int pixelIndex = 0; pixelIndex < wStructure.size(); pixelIndex++) {
+		WPixel* p = wStructure.at(pixelIndex);
 
-
-	// Create a kernel that we will use for accuting/sharpening our image
-	Mat kernelMatrix = (Mat_<float>(3, 3) <<
-		1, 1, 1,
-		1, -8, 1,
-		1, 1, 1); // an approximation of second derivative, a quite strong kernel
-				  // do the laplacian filtering as it is
-				  // well, we need to convert everything in something more deeper then CV_8U
-				  // because the kernel has some negative values,
-				  // and we can expect in general to have a Laplacian image with negative values
-				  // BUT a 8bits unsigned int (the one we are working with) can contain values from 0 to 255
-				  // so the possible negative number will be truncated
-	Mat imgLaplacian;
-	this->imgRes = this->imgSrc; // copy source image to another temporary one
-	filter2D(this->imgRes, imgLaplacian, CV_32F, kernelMatrix);
-	this->imgSrc.convertTo(this->imgRes, CV_32F);
-	this->imgRes = this->imgRes - imgLaplacian;
-	// convert back to 8bits gray scale
-	this->imgRes.convertTo(this->imgRes, CV_8UC3);
-	imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
-	
-	Mat imgGray;
-	cvtColor(this->imgRes, imgGray, CV_BGR2GRAY);
-	threshold(imgGray, imgGray, 40, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
-
-
-
-	// Perform the distance transform algorithm
-	Mat imgDist;
-	distanceTransform(imgGray, imgDist, CV_DIST_L2, 3);
-	// Normalize the distance image for range = {0.0, 1.0}
-	// so we can visualize and threshold it
-	normalize(imgDist, imgDist, 0, 1., NORM_MINMAX);
-
-
-	// Create the CV_8U version of the distance image
-	// It is needed for findContours()
-	Mat imgDist8;
-	imgDist.convertTo(imgDist8, CV_8U);
-	// Find total markers
-	vector<vector<Point> > contoursVect;
-	findContours(imgDist8, contoursVect, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-	// Create the marker image for the watershed algorithm
-	Mat markers = Mat::zeros(imgDist.size(), CV_32SC1);
-	// Draw the foreground markers
-	for (size_t i = 0; i < contoursVect.size(); i++)
-		drawContours(markers, contoursVect, static_cast<int>(i), Scalar::all(static_cast<int>(i) + 1), -1);
-	// Draw the background marker
-	circle(markers, Point(5, 5), 3, CV_RGB(255, 255, 255), -1);
-
-
-
-
-	// Perform the watershed algorithm
-	watershed(this->imgRes, markers);
-	Mat mark = Mat::zeros(markers.size(), CV_8UC1);
-	markers.convertTo(mark, CV_8UC1);
-	bitwise_not(mark, mark);
-
-	// image looks like at that point
-	// Generate random colorVect
-	vector<Vec3b> colorVect;
-	for (size_t i = 0; i < contoursVect.size(); i++)
-	{
-		int b = theRNG().uniform(0, 255);
-		int g = theRNG().uniform(0, 255);
-		int r = theRNG().uniform(0, 255);
-		colorVect.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
-	}
-	// Create the result image
-	this->imgRes = Mat::zeros(markers.size(), CV_8UC3);
-	// Fill labeled objects with random colorVect
-	for (int i = 0; i < markers.rows; i++)
-	{
-		for (int j = 0; j < markers.cols; j++)
-		{
-			int index = markers.at<int>(i, j);
-			if (index > 0 && index <= static_cast<int>(contoursVect.size()))
-				this->imgRes.at<Vec3b>(i, j) = colorVect[index - 1];
-			else
-				this->imgRes.at<Vec3b>(i, j) = Vec3b(0, 0, 0);
+		if (p->isWatershed() && !p->areAllNeighWatershed()) {
+			wsPixels[p->getX() + p->getY()*w] = (char)255;
+			grayPixels[p->getX() + p->getY()*w] = (char)255;
 		}
 	}
-	// Visualize the final image
-	//imshow("Final Result", this->imgRes);
+	imgNameTmp = imgName + "_WS.jpg"; cvSaveImage(imgNameTmp.c_str(), pWS);
+	imgNameTmp = imgName + "_Gray_WS.jpg"; cvSaveImage(imgNameTmp.c_str(), pGray);
 
-	return this->imgRes;
+	printf("\nZaczynam wyswietlanie\n");
+	cvReleaseImage(&pGray);
+	printf("\Kontynuuje wyswietlanie\n");
+	cvReleaseImage(&imgGray);
+	printf("\Koncze wyswietlanie\n");
 }
 
-bool operator== (Watershed::Watershed_enum &r, Watershed::Watershed_enum &l) {
-	return (int)r == (int)l;
-}
+

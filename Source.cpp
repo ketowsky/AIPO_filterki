@@ -91,6 +91,10 @@ int main(){
 			std::cout << "Zla cyfra" << std::endl;
 			return 0;
 		}
+		
+		imshow("Org", image);
+		imshow("Dest", dest);
+		waitKey(0);
 	}
 	//Linear Kuwahara
 	else if (numberM == 2){
@@ -131,11 +135,17 @@ int main(){
 			std::cout << "Zla cyfra" << std::endl;
 			return 0;
 		}
+		
+		imshow("Org", image);
+		imshow("Dest", dest);
+		waitKey(0);
 	}
+
 	//Watershed
 	else if(numberM == 3){
-		Watershed * watershedObj = new Watershed(image);
-		dest = watershedObj->runAnalyse();
+		IplImage * implObj = new IplImage(image.clone());
+		Watershed * watershedObj = new Watershed();
+		watershedObj->Run(implObj, "Watershed");
 	}
 	//FillHoles
 	else if (numberM == 4){
@@ -156,8 +166,6 @@ int main(){
 		dest = fillHoles(image);
 	}
 	
-	imshow("Org", image);
-	imshow("Dest", dest);
-	waitKey(0);
+
 
 }
