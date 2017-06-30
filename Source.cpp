@@ -22,6 +22,7 @@ int main(){
 	Mat image;
 	
 
+	
 	Mat dest;
 	if (numberM == 1){
 		std::cout << "Wybierz obraz (wpisz cyfre od 1-3):" << std::endl;
@@ -91,10 +92,6 @@ int main(){
 			std::cout << "Zla cyfra" << std::endl;
 			return 0;
 		}
-		
-		imshow("Org", image);
-		imshow("Dest", dest);
-		waitKey(0);
 	}
 	//Linear Kuwahara
 	else if (numberM == 2){
@@ -135,17 +132,25 @@ int main(){
 			std::cout << "Zla cyfra" << std::endl;
 			return 0;
 		}
-		
-		imshow("Org", image);
-		imshow("Dest", dest);
-		waitKey(0);
 	}
-
-	//Watershed
-	else if(numberM == 3){
+	else if (numberM == 3){
+		std::cout << "Wybierz obraz (wpisz cyfre od 1-2):" << std::endl;
+		std::cin >> number;
+		switch (number){
+		case 1:
+			image = imread("watershed/obr1.png");
+			break;
+		case 2:
+			image = imread("watershed/obr2.png");
+			break;
+		default:
+			std::cout << "Zla cyfra" << std::endl;
+			return 0;
+		}
 		IplImage * implObj = new IplImage(image.clone());
 		Watershed * watershedObj = new Watershed();
-		watershedObj->Run(implObj, "Watershed");
+		dest = watershedObj->Run(implObj, "Watershed");
+		delete watershedObj;
 	}
 	//FillHoles
 	else if (numberM == 4){
@@ -166,6 +171,8 @@ int main(){
 		dest = fillHoles(image);
 	}
 	
-
+	imshow("Org", image);
+	imshow("Dest", dest);
+	waitKey(0);
 
 }

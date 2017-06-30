@@ -9,6 +9,8 @@
 #include <algorithm>
 
 
+using namespace cv;
+
 class WPixel {
 	static const int init = -1;
 	static const int mask = -2;
@@ -66,7 +68,7 @@ class Watershed {
 	static const int hMax = 256;
 
 public:
-	void Run(IplImage* imgSrc, const std::string& imgName);
+	Mat Run(IplImage* imgSrc, const std::string& imgName);
 };
 
 #endif
